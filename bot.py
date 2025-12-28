@@ -9,6 +9,10 @@ GUILD_ID = 1454510378305327291
 VERIFY_CHANNEL_ID = 1454834468115452026
 LOG_CHANNEL_ID = 1454840923300298906
 
+OWNER_IDS = [
+    413597092867735552
+]
+
 ROLE_IDS = [
     1454607108300603525,
     1454605263234535567
@@ -59,6 +63,13 @@ async def on_ready():
 
 @tree.command(name="revive", description="Resend verification to unverified users", guild=discord.Object(id=GUILD_ID))
 async def revive(interaction: discord.Interaction):
+    if interaction.user.id not in OWNER_IDS:
+        await interaction.response.send_message(
+            "❌ You are not allowed to use this command.",
+            ephemeral=True
+        )
+        return
+
     await interaction.response.defer(ephemeral=True)
 
     pending = load_json(PENDING_FILE)

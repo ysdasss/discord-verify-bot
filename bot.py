@@ -1,137 +1,96 @@
 import discord
-from discord import app_commands
 from discord.ext import commands
+from discord import app_commands
 import json
 import os
-import logging
 
 GUILD_ID = 1454510378305327291
-VERIFY_CHANNEL_ID = 1454834468115452026
-LOG_CHANNEL_ID = 1454840923300298906
-
-OWNER_IDS = [
-    413597092867735552
-]
+VERIFY_CHANNEL = 1454834468115452026
+LOG_CHANNEL = 1454840923300298906
+OWNER_ID = 413597092867735552
 
 ROLE_IDS = [
     1454607108300603525,
     1454605263234535567
 ]
 
-OAUTH_URL = "https://discord.com/oauth2/authorize?client_id=1454583842110177371&response_type=code&redirect_uri=https://verify-bot-wdim.onrender.com/callback&scope=identify+guilds.join"
-
-PENDING_FILE = "pending.json"
-USERS_FILE = "users.json"
-
+OAUTH_URL = (
+    "https://discord.com/oauth2/authorize"
+    "?client_id=1454583842110177371"
+    "&response_type=code"
+    "&redirect_uri=https%3A%2F%2Fverify-bot.onrender.com%2Fcallback"
+    "&scope=identify+guilds.join"
+)
 
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
-tree = bot.tree
-
-logging.basicConfig(level=logging.INFO)
-
-
-def load_json(path):
-    if not os.path.exists(path):
-        return {}
-    with open(path, "r") as f:
-        return json.load(f)
-
-
-def save_json(path, data):
-    with open(path, "w") as f:
-        json.dump(data, f, indent=4)
-
-
-class VerifyView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-
-    @discord.ui.button(label="Verify", style=discord.ButtonStyle.link, url=OAUTH_URL)
-    async def verify(self, interaction: discord.Interaction, button: discord.ui.Button):
-        pass
-
 
 @bot.event
 async def on_ready():
-    await tree.sync(guild=discord.Object(id=GUILD_ID))
+    await bot.tree.sync()
     print(f"Logged in as {bot.user}")
 
+@bot.event
+async def on_member_join(member):
+    channel = bot.get_channel(VERIFY_CHANNEL)
+    if not channel:
+        return
 
-@tree.command(name="revive", description="Resend verification to unverified users", guild=discord.Object(id=GUILD_ID))
+    view = discord.ui.View()
+    view.add_item(
+        discord.ui.Button(
+            label="Verify",
+            style=discord.ButtonStyle.link,
+            url=OAUTH_URL
+        )
+    )
+
+    await channel.send(
+        f"🔒 **Verification Required**\n"
+        f"Welcome {member.mention}! Please click the button below to verify.",
+        view=view
+    )
+
+@bot.tree.command(name="revive", description="Check verified users status")
 async def revive(interaction: discord.Interaction):
-    if interaction.user.id not in OWNER_IDS:
+    if interaction.user.id != OWNER_ID:
         await interaction.response.send_message(
             "❌ You are not allowed to use this command.",
             ephemeral=True
         )
         return
 
-    await interaction.response.defer(ephemeral=True)
+    if not os.path.exists("users.json"):
+        await interaction.response.send_message(
+            "No verified users stored yet.",
+            ephemeral=True
+        )
+        return
 
-    pending = load_json(PENDING_FILE)
-    users = load_json(USERS_FILE)
+    with open("users.json", "r") as f:
+        users = json.load(f)
 
     guild = bot.get_guild(GUILD_ID)
-    verify_channel = guild.get_channel(VERIFY_CHANNEL_ID)
 
-    revived = 0
+    still_in_server = 0
+    left_server = 0
 
-    for user_id in list(pending.keys()):
+    for user_id in users:
         member = guild.get_member(int(user_id))
-        if not member:
-            continue
+        if member:
+            still_in_server += 1
+        else:
+            left_server += 1
 
-        if user_id in users:
-            continue
-
-        embed = discord.Embed(
-            title="🔒 Verification Required",
-            description="Click the button below to verify.",
-            color=discord.Color.blurple()
-        )
-
-        await verify_channel.send(
-            content=f"Welcome {member.mention}! Please verify to get access.",
-            embed=embed,
-            view=VerifyView()
-        )
-
-        revived += 1
-
-    await interaction.followup.send(
-        f"✅ Revive complete. `{revived}` users were re-sent verification.",
+    await interaction.response.send_message(
+        f"🔄 **Revive Report**\n"
+        f"✅ Still in server: **{still_in_server}**\n"
+        f"❌ Left server: **{left_server}**",
         ephemeral=True
     )
 
-
-async def handle_verified_user(user_id: int):
-    guild = bot.get_guild(GUILD_ID)
-    member = guild.get_member(user_id)
-    if not member:
-        return
-
-    for role_id in ROLE_IDS:
-        role = guild.get_role(role_id)
-        if role:
-            await member.add_roles(role)
-
-    users = load_json(USERS_FILE)
-    users[str(user_id)] = True
-    save_json(USERS_FILE, users)
-
-    pending = load_json(PENDING_FILE)
-    pending.pop(str(user_id), None)
-    save_json(PENDING_FILE, pending)
-
-    log_channel = guild.get_channel(LOG_CHANNEL_ID)
-    if log_channel:
-        await log_channel.send(f"✅ **{member}** has verified successfully.")
-
-
-def run_bot():
-    token = os.getenv("DISCORD_TOKEN")
+def run_bot(token):
     bot.run(token)

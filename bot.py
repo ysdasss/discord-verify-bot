@@ -1,17 +1,17 @@
-import discord
+``import discord
 from discord.ext import commands
 from discord import app_commands
 import json
 import os
 
-GUILD_ID = 1454941494074150943
-VERIFY_CHANNEL = 1454941495164666068
-LOG_CHANNEL = 1454941513380401295
-OWNER_ID = 1016681218076581968
+GUILD_ID = 1454510378305327291
+VERIFY_CHANNEL = 1454834468115452026
+LOG_CHANNEL = 1454840923300298906
+OWNER_ID = 413597092867735552
 
 ROLE_IDS = [
-    1454941589444235345,
-    1454941538915455239
+    1454607108300603525,
+    1454605263234535567
 ]
 
 OAUTH_URL = (
@@ -92,6 +92,4 @@ async def revive(interaction: discord.Interaction):
         ephemeral=True
     )
 
-def run_bot(token):
-    bot.run(token)
-
+def run_bot(token):``

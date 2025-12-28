@@ -1,45 +1,56 @@
 from flask import Flask, request
-import requests, json, os
+import requests
+import json
+import os
+import discord
+import asyncio
 
-app = Flask(__name__)
-
-# ===== ENV VARS =====
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
-# ===== IDS =====
 CLIENT_ID = "1454583842110177371"
+REDIRECT_URI = "https://verify-bot.onrender.com/callback"
+
 GUILD_ID = 1454510378305327291
-LOG_CHANNEL_ID = 1454840923300298906
-
-# ===== RAILWAY CALLBACK URL =====
-# CHANGE AFTER DEPLOY
-REDIRECT_URI = "https://your-project.up.railway.app/callback"
-
-ROLES = [
+ROLE_IDS = [
     1454607108300603525,
     1454605263234535567
 ]
+LOG_CHANNEL = 1454840923300298906
+
+app = Flask(__name__)
+
+def save_user(user_id):
+    if not os.path.exists("users.json"):
+        with open("users.json", "w") as f:
+            json.dump({}, f)
+
+    with open("users.json", "r") as f:
+        users = json.load(f)
+
+    users[user_id] = True
+
+    with open("users.json", "w") as f:
+        json.dump(users, f, indent=4)
 
 @app.route("/callback")
 def callback():
     code = request.args.get("code")
 
-    token = requests.post(
+    token_res = requests.post(
         "https://discord.com/api/oauth2/token",
         data={
             "client_id": CLIENT_ID,
             "client_secret": CLIENT_SECRET,
             "grant_type": "authorization_code",
             "code": code,
-            "redirect_uri": REDIRECT_URI
+            "redirect_uri": REDIRECT_URI,
+            "scope": "identify guilds.join"
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"}
     ).json()
 
-    access_token = token.get("access_token")
-    if not access_token:
-        return "❌ Authorization failed."
+    access_token = token_res["access_token"]
 
     user = requests.get(
         "https://discord.com/api/users/@me",
@@ -48,21 +59,8 @@ def callback():
 
     user_id = user["id"]
 
-    # Save user for revive
-    try:
-        with open("users.json", "r") as f:
-            users = json.load(f)
-    except:
-        users = {}
-
-    users[user_id] = {"access_token": access_token}
-
-    with open("users.json", "w") as f:
-        json.dump(users, f)
-
-    # Add to server
     requests.put(
-        f"https://discord.com/api/v10/guilds/{GUILD_ID}/members/{user_id}",
+        f"https://discord.com/api/guilds/{GUILD_ID}/members/{user_id}",
         headers={
             "Authorization": f"Bot {BOT_TOKEN}",
             "Content-Type": "application/json"
@@ -70,41 +68,16 @@ def callback():
         json={"access_token": access_token}
     )
 
-    # Give roles
-    for role in ROLES:
+    for role_id in ROLE_IDS:
         requests.put(
-            f"https://discord.com/api/v10/guilds/{GUILD_ID}/members/{user_id}/roles/{role}",
+            f"https://discord.com/api/guilds/{GUILD_ID}/members/{user_id}/roles/{role_id}",
             headers={"Authorization": f"Bot {BOT_TOKEN}"}
         )
 
-    # Delete verify message
-    try:
-        with open("pending.json", "r") as f:
-            pending = json.load(f)
+    save_user(user_id)
 
-        data = pending.get(user_id)
-        if data:
-            requests.delete(
-                f"https://discord.com/api/v10/channels/{data['channel_id']}/messages/{data['message_id']}",
-                headers={"Authorization": f"Bot {BOT_TOKEN}"}
-            )
-            pending.pop(user_id)
-            with open("pending.json", "w") as f:
-                json.dump(pending, f)
-    except:
-        pass
+    return "✅ You are verified. You can close this tab."
 
-    # Log verification
-    requests.post(
-        f"https://discord.com/api/v10/channels/{LOG_CHANNEL_ID}/messages",
-        headers={
-            "Authorization": f"Bot {BOT_TOKEN}",
-            "Content-Type": "application/json"
-        },
-        json={"content": f"✅ <@{user_id}> verified and roles assigned."}
-    )
-
-    return "✅ Verified! You can close this tab."
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+def run_web():
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)

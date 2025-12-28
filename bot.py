@@ -18,7 +18,7 @@ OAUTH_URL = (
     "https://discord.com/oauth2/authorize"
     "?client_id=1454583842110177371"
     "&response_type=code"
-    "&redirect_uri=https%3A%2F%2Fverify-bot.onrender.com%2Fcallback"
+    "&redirect_uri=http%3A%2F%2Flocalhost%3A5000%2Fcallback"
     "&scope=identify+guilds.join"
 )
 
@@ -103,3 +103,4 @@ async def revive(interaction: discord.Interaction):
 
 def run_bot(token):
     bot.run(token)
+

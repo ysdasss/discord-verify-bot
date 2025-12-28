@@ -63,8 +63,11 @@ async def revive(interaction: discord.Interaction):
         )
         return
 
+    # 🔴 IMPORTANT FIX
+    await interaction.response.defer(ephemeral=True)
+
     if not os.path.exists("users.json"):
-        await interaction.response.send_message(
+        await interaction.followup.send(
             "No verified users stored yet.",
             ephemeral=True
         )
@@ -74,6 +77,12 @@ async def revive(interaction: discord.Interaction):
         users = json.load(f)
 
     guild = bot.get_guild(GUILD_ID)
+    if not guild:
+        await interaction.followup.send(
+            "Guild not found.",
+            ephemeral=True
+        )
+        return
 
     still_in_server = 0
     left_server = 0
@@ -85,7 +94,7 @@ async def revive(interaction: discord.Interaction):
         else:
             left_server += 1
 
-    await interaction.response.send_message(
+    await interaction.followup.send(
         f"🔄 **Revive Report**\n"
         f"✅ Still in server: **{still_in_server}**\n"
         f"❌ Left server: **{left_server}**",

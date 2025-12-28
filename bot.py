@@ -1,4 +1,4 @@
-``import discord
+import discord
 from discord.ext import commands
 from discord import app_commands
 import json
@@ -92,4 +92,5 @@ async def revive(interaction: discord.Interaction):
         ephemeral=True
     )
 
-def run_bot(token):``
+def run_bot(token):
+

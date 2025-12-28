@@ -36,6 +36,8 @@ async def on_ready():
 @bot.event
 async def on_member_join(member):
     channel = bot.get_channel(VERIFY_CHANNEL)
+    if not channel:
+        return
 
     view = discord.ui.View()
     view.add_item(
@@ -47,7 +49,8 @@ async def on_member_join(member):
     )
 
     await channel.send(
-        f"Welcome {member.mention}! Please verify to get access.",
+        f"🔒 **Verification Required**\n"
+        f"Welcome {member.mention}! Please click the button below to verify.",
         view=view
     )
 

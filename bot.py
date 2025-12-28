@@ -93,4 +93,4 @@ async def revive(interaction: discord.Interaction):
     )
 
 def run_bot(token):
-
+    bot.run(TOKEN)

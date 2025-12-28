@@ -11,12 +11,12 @@ CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 CLIENT_ID = "1454583842110177371"
 REDIRECT_URI = "https://verify-bot.onrender.com/callback"
 
-GUILD_ID = 1454510378305327291
+GUILD_ID = 1454941494074150943
 ROLE_IDS = [
-    1454607108300603525,
-    1454605263234535567
+    1454941538915455239,
+    1454941589444235345
 ]
-LOG_CHANNEL = 1454840923300298906
+LOG_CHANNEL = 1454941513380401295
 
 app = Flask(__name__)
 
@@ -81,3 +81,4 @@ def callback():
 def run_web():
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
